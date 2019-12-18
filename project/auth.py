@@ -18,7 +18,8 @@ auth = Blueprint('auth', __name__)
 
 rp = PublicKeyCredentialRpEntity("localhost", "Demo server")
 
-server = Fido2Server(rp)
+server = Fido2Server(rp) # do not prefer attestation='direct' since it adds another popup. 
+# This would store data that could uniquely identify the device (prefer storing as little data as possible)
 
 def ldapQuery():
     # This should be in a separate module along with other LDAP CRUD ops
@@ -150,6 +151,7 @@ def register_complete():
 
     encoded_creds = websafe_encode(auth_data.credential_data)
     #print("ENCODED CREDS: ", encodedCreds)
+
     # Then store encodedCreds to LDAP user profile
     ldapStore(current_user, encoded_creds)
 
@@ -160,11 +162,8 @@ def register_complete():
 # Should require another attribute that a Two-Factor authenticator is registered to the user
 @login_required
 def authenticate_begin():
-    test = [AttestedCredentialData(websafe_decode(ldapQuery()))]
-    print("TEST: ", test)
-
-    auth_data, state = server.authenticate_begin(test)
-
+    credential = [AttestedCredentialData(websafe_decode(ldapQuery()))]
+    auth_data, state = server.authenticate_begin(credential)
     session["state"] = state
     return cbor.encode(auth_data)
 
@@ -173,7 +172,7 @@ def authenticate_begin():
 # Should require another attribute that a Two-Factor authenticator is registered to the user
 @login_required
 def authenticate_complete():
-    credential = [AttestedCredentialData(websafe_decode(ldapQuery()))] # is the second trip necessary?
+    credential = [AttestedCredentialData(websafe_decode(ldapQuery()))] 
     data = cbor.decode(request.get_data())
     credential_id = data["credentialId"]
     client_data = ClientData(data["clientDataJSON"])
@@ -196,7 +195,7 @@ def authenticate_complete():
     print("ASSERTION OK")
 
 
-    # There may be a WebAuthn, 17 step verification that needs to be done
+    # There may be a WebAuthn, 17 step verification that needs to be done, unsure if authenticate_complete() handles that
     session['twofactor_authenticated'] = True # need something better than session to store this state
 
     return cbor.encode({"status": "OK"})
