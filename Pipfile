@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+flask = "*"
+fido2 = "*"
+SQLAlchemy = "*"
+Flask-SQLAlchemy = "*"
+Flask-Login = "*"
+python-ldap = "./python_ldap-3.2.0-cp38-cp38-win32.whl"
+
+[dev-packages]
+
+[requires]
+python_version = "3.8"
+
+[scripts]
+flask = "flask run"

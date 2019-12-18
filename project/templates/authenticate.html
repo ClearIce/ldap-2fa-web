@@ -1,0 +1,19 @@
+<!-- templates/profile.html -->
+
+{% extends "base.html" %}
+
+{% block content %}
+<h1 class="title">
+  Welcome, {{ name }}!
+</h1>
+
+<div class="column is-4 is-offset-4">
+  <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Register YubiKey!</button>
+</div>
+<script>
+  let register2fa = document.getElementById('reg2fa');
+  register2fa.onclick = () => {
+    
+  }
+</script>
+{% endblock %}
