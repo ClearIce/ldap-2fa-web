@@ -33,8 +33,9 @@ def ldapQuery():
     ldap_encoded = result[0][1]['credential'][0]
     return ldap_encoded
 
+
 def ldapStore(user, authenticator_data):
-    print("TWO-FACTOR REGISTRATION: ", user.email, "\n", authenticator_data)
+    print("TWO-FACTOR REGISTRATION STORE: ", user.email, "\n", authenticator_data)
     
 
 @auth.route('/login', methods=['GET'])
@@ -96,7 +97,7 @@ def signup_post():
     # add the new user to the database
     db.session.add(new_user)
     db.session.commit()
-
+    flash('Thank you for signing up. Now please log in.')
     return redirect(url_for('auth.login'))
 
 
@@ -104,18 +105,21 @@ def signup_post():
 @login_required
 def logout():
     logout_user()
+    session['twofactor_authenticated'] = False
+
     return redirect(url_for('main.index'))
+
 
 @auth.route('/twofactor', methods=['GET'])
 @login_required
 def twofactor():
     return render_template('authenticate.html')
 
+
 @auth.route("/api/register/begin", methods=["POST"])
 @login_required
 def register_begin():
-    current_user.email # this is proxied to the User model in models.py, see /login method
-    # The user id in this example app is a primary key, unsure if that is good for the id in register_begin
+    # The user id in this example app is a database primary key, unsure if that is good for the id in register_begin
 
     # Logged in User ID / name would need to be verified from LDAP, don't just trust the user!
     
@@ -124,8 +128,8 @@ def register_begin():
     registration_data, state = server.register_begin(
         {
             "id": b"user_id123",
-            "name": "a_user123",
-            "displayName": "A. User 123",
+            "name": current_user.email,
+            "displayName": current_user.name,
         },
         None,
         user_verification="discouraged",
@@ -144,7 +148,7 @@ def register_complete():
     data = cbor.decode(request.get_data())
     client_data = ClientData(data["clientDataJSON"])
     att_obj = AttestationObject(data["attestationObject"])
-    print("REGISTER COMPLETE clientData", client_data)
+    #print("REGISTER COMPLETE clientData", client_data)
     #print("AttestationObject:", att_obj)
 
     auth_data = server.register_complete(session["state"], client_data, att_obj)
@@ -153,7 +157,6 @@ def register_complete():
     #print("ENCODED CREDS: ", encodedCreds)
     # Then store encodedCreds to LDAP user profile
     ldapStore(current_user, encoded_creds)
-    print("STORED CREDENTIAL:", current_user, encoded_creds)
 
     return cbor.encode({"status": "OK"})
 

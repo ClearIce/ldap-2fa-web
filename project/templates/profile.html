@@ -17,7 +17,12 @@
       {% endif %}
     {% endwith %}
   </div>
+
+  {% if user_is_super_secure %}
+  <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Register a new YubiKey!</button>
+  {% else %}
   <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Register YubiKey!</button>
+  {% endif %}
 </div>
 <script>
   let register2fa = document.getElementById('reg2fa');
@@ -39,8 +44,9 @@
         })
       });
     }).then(function(response) {
-      var stat = response.ok ? 'successful' : 'unsuccessful';
-      alert('Registration ' + stat + ' More details in server log...');
+      var stat = response.ok ? 'SUCCESSFUL' : 'FAILED';
+      var direction = response.ok ? ' Remember to update LDAP!' : '';
+      alert('Registration ' + stat + '!');
     }, function(reason) {
       alert(reason);
     }).then(function() {

@@ -32,8 +32,8 @@
         })
       })
     }).then(function(response) {
-      var stat = response.ok ? 'successful' : 'unsuccessful';
-      alert('Authentication ' + stat + ' More details in server log...');
+      var stat = response.ok ? 'SUCCESSFUL' : 'FAILED';
+      alert('Authentication ' + stat + '!');
     }, function(reason) {
       alert(reason);
     }).then(function() {
