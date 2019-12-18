@@ -18,12 +18,7 @@ auth = Blueprint('auth', __name__)
 
 rp = PublicKeyCredentialRpEntity("localhost", "Demo server")
 
-# What is the trade off for marking attestation?
-#server = Fido2Server(rp)
-server = Fido2Server(rp, attestation="direct") 
-# attestation="direct" means we'll know the make/model and unique ID of the authenticator
-# WITHOUT this, the authentication isn't working since the AAGUID is all zeroes and we get "Unknown credential ID" 
-# Need to consider implications of this
+server = Fido2Server(rp)
 
 def ldapQuery():
     # This should be in a separate module along with other LDAP CRUD ops
@@ -178,7 +173,7 @@ def authenticate_begin():
 # Should require another attribute that a Two-Factor authenticator is registered to the user
 @login_required
 def authenticate_complete():
-    credentials = [AttestedCredentialData(websafe_decode(ldapQuery()))] # is the second trip necessary?
+    credential = [AttestedCredentialData(websafe_decode(ldapQuery()))] # is the second trip necessary?
     data = cbor.decode(request.get_data())
     credential_id = data["credentialId"]
     client_data = ClientData(data["clientDataJSON"])
@@ -190,7 +185,7 @@ def authenticate_complete():
 
     server.authenticate_complete(
         session.pop("state"),
-        credentials,
+        credential,
         credential_id,
         client_data,
         auth_data,
