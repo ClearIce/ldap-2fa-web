@@ -8,6 +8,15 @@
 </h1>
 
 <div class="column is-4 is-offset-4">
+  <div class="box">
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        <div class="notification is-danger">
+            {{ messages[0] }}
+        </div>
+      {% endif %}
+    {% endwith %}
+  </div>
   <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Register YubiKey!</button>
 </div>
 <script>
@@ -35,7 +44,7 @@
     }, function(reason) {
       alert(reason);
     }).then(function() {
-      window.location = '/';
+      window.location = '/twofactor';
     });
   }
 </script>

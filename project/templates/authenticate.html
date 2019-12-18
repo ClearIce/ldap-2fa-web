@@ -4,16 +4,41 @@
 
 {% block content %}
 <h1 class="title">
-  Welcome, {{ name }}!
+  Two-Factor Authentication required!
 </h1>
 
 <div class="column is-4 is-offset-4">
-  <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Register YubiKey!</button>
+  <button id="reg2fa" class="button is-block is-info is-large is-fullwidth">Authenticate with YubiKey!</button>
 </div>
 <script>
   let register2fa = document.getElementById('reg2fa');
   register2fa.onclick = () => {
-    
+    fetch('/api/authenticate/begin', {
+      method: 'POST',
+    }).then(function(response) {
+      if(response.ok) return response.arrayBuffer();
+      throw new Error('No credential available to authenticate!');
+    }).then(CBOR.decode).then(function(options) {
+      return navigator.credentials.get(options);
+    }).then(function(assertion) {
+      return fetch('/api/authenticate/complete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/cbor'},
+        body: CBOR.encode({
+          "credentialId": new Uint8Array(assertion.rawId),
+          "authenticatorData": new Uint8Array(assertion.response.authenticatorData),
+          "clientDataJSON": new Uint8Array(assertion.response.clientDataJSON),
+          "signature": new Uint8Array(assertion.response.signature)
+        })
+      })
+    }).then(function(response) {
+      var stat = response.ok ? 'successful' : 'unsuccessful';
+      alert('Authentication ' + stat + ' More details in server log...');
+    }, function(reason) {
+      alert(reason);
+    }).then(function() {
+      window.location = '/';
+    });
   }
 </script>
 {% endblock %}

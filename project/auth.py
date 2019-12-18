@@ -34,10 +34,10 @@ def ldapQuery():
     return ldap_encoded
 
 def ldapStore(user, authenticator_data):
-    print("TWO-FACTOR REGISTRATION: ", user, "\n", authenticator_data)
+    print("TWO-FACTOR REGISTRATION: ", user.email, "\n", authenticator_data)
     
 
-@auth.route('/login')
+@auth.route('/login', methods=['GET'])
 def login():
     return render_template('login.html')
 
@@ -60,16 +60,19 @@ def login_post():
     login_user(user, remember=remember)
 
     authenticator_data = ldapQuery()
-    twofactor_enabled_for_user = (authenticator_data == "None" or authenticator_data == None)
+    print("authenticator_data: ", authenticator_data)
+
+    twofactor_enabled_for_user = not (authenticator_data == b'None' or authenticator_data == None)
+    print("twofactor_enabled_for_user: ", twofactor_enabled_for_user)
 
     if twofactor_enabled_for_user:
-        return redirect(url_for('auth.authenticate_begin'))
+        return redirect(url_for('auth.twofactor'))
     else:
         flash('You should really register a Two Factor authenticator!')
         return redirect(url_for('main.profile'))
 
 
-@auth.route('/signup')
+@auth.route('/signup', methods=['GET'])
 def signup():
     return render_template('signup.html')
 
@@ -97,12 +100,16 @@ def signup_post():
     return redirect(url_for('auth.login'))
 
 
-@auth.route('/logout')
+@auth.route('/logout', methods=['GET'])
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('main.index'))
 
+@auth.route('/twofactor', methods=['GET'])
+@login_required
+def twofactor():
+    return render_template('authenticate.html')
 
 @auth.route("/api/register/begin", methods=["POST"])
 @login_required
@@ -137,7 +144,7 @@ def register_complete():
     data = cbor.decode(request.get_data())
     client_data = ClientData(data["clientDataJSON"])
     att_obj = AttestationObject(data["attestationObject"])
-    #print("clientData", client_data)
+    print("REGISTER COMPLETE clientData", client_data)
     #print("AttestationObject:", att_obj)
 
     auth_data = server.register_complete(session["state"], client_data, att_obj)
@@ -168,6 +175,7 @@ def authenticate_begin():
 # Should require another attribute that a Two-Factor authenticator is registered to the user
 @login_required
 def authenticate_complete():
+    credentials = [AttestedCredentialData(websafe_decode(ldapQuery()))] # is the second trip necessary?
     data = cbor.decode(request.get_data())
     credential_id = data["credentialId"]
     client_data = ClientData(data["clientDataJSON"])
@@ -179,11 +187,18 @@ def authenticate_complete():
 
     server.authenticate_complete(
         session.pop("state"),
-        None,
+        credentials,
         credential_id,
         client_data,
         auth_data,
         signature,
     )
+
+    # python-fido2 throws exceptions for rejected authentications, but this should be better handled
     print("ASSERTION OK")
+
+
+    # There may be a WebAuthn, 17 step verification that needs to be done
+    session['twofactor_authenticated'] = True # need something better than session to store this state
+
     return cbor.encode({"status": "OK"})
